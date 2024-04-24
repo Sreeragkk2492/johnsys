@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:johnsys/controller/apihelper.dart';
 import 'package:johnsys/model/johnsys.dart';
+import 'package:johnsys/model/usermodel.dart';
+import 'package:johnsys/services/databasesql.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -13,11 +15,13 @@ class CounterProvider extends ChangeNotifier {
 
   late Future<List<Johnsys>> _fetcheddata;
 
-  late Database _database;
+ SqlHelper sql=SqlHelper();
 
-  CounterProvider(){
-    initdatabase();
-  }
+List <User>_user=[];
+
+List <User> get currentuser=>_user;
+
+  
 
   List<Johnsys> product = [];
 
@@ -53,24 +57,25 @@ class CounterProvider extends ChangeNotifier {
     john.total = int.parse(john.mrp.toString().trim()) * john.count;
     return john.total;
   }
-  
- Future <void> initdatabase() async{
-  String path= join(await getDatabasesPath(),'user.db');
-  _database=await openDatabase(path,onCreate: createdb,version: 1);
+
+ Future<void> registeruser(String username,String password)async{
+  try{
+  await SqlHelper.opendb();
+   await SqlHelper.insertuser(User(username: username,password: password));
+ notifyListeners();
+  }catch(error){
+    print(error);
+  }
  }
 
-  Future <void> createdb(Database db, int version) async{
-    await db.execute('CREATE TABLE user(id INTEGER PRIMARY KEY AUTOINCREMENT,username TEXT,password TEXT)');
-  }
-
-  Future<void> registeruser(String username,String password)async{
-  await _database.insert('user', {'username':username,'password':password});
+ Future<void> loginuser(String username,String password)async{
+ List<User>users =await SqlHelper.getuser(username, password); 
+  
+  _user=users;
   notifyListeners();
-  }
-   Future<void> loginUser(String username, String password) async {
-    List<Map<String, dynamic>> user = await _database.query('user',
-        where: 'username = ? AND password = ?', whereArgs: [username, password]);
-        notifyListeners();
-   
-  }
+
+
+ }
+  
+ 
 }
